@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>ETC5523 CWD Presentation by team ‘mu’</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Rahul Bharadwaj Mysore Venkatesh" />
+    <meta name="author" content="Varsha Ujjinni Vijay Kumar" />
+    <link href="libs/remark-css/rutgers.css" rel="stylesheet" />
+    <link href="libs/remark-css/rladies-fonts.css" rel="stylesheet" />
+    <link href="libs/panelset/panelset.css" rel="stylesheet" />
+    <script src="libs/panelset/panelset.js"></script>
+    <script src="libs/htmlwidgets/htmlwidgets.js"></script>
+    <script src="libs/jquery/jquery.min.js"></script>
+    <link href="libs/leaflet/leaflet.css" rel="stylesheet" />
+    <script src="libs/leaflet/leaflet.js"></script>
+    <link href="libs/leafletfix/leafletfix.css" rel="stylesheet" />
+    <script src="libs/Proj4Leaflet/proj4-compressed.js"></script>
+    <script src="libs/Proj4Leaflet/proj4leaflet.js"></script>
+    <link href="libs/rstudio_leaflet/rstudio_leaflet.css" rel="stylesheet" />
+    <script src="libs/leaflet-binding/leaflet.js"></script>
+    <link href="libs/leaflet-awesomemarkers/leaflet.awesome-markers.css" rel="stylesheet" />
+    <script src="libs/leaflet-awesomemarkers/leaflet.awesome-markers.min.js"></script>
+    <link href="libs/fontawesome/font-awesome.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="styling.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# ETC5523 CWD Presentation by team ‘mu’
+## Microclimate Patterns across Melbourne
+### Rahul Bharadwaj Mysore Venkatesh
+### Varsha Ujjinni Vijay Kumar
+### Monash University
+### 2020/11/04
+
+---
+
+background-image: url(https://cms.hostelworld.com/hwblog/wp-content/uploads/sites/2/2017/11/Sydney-vs-Melbourne-@miss_kamw-mel-weather.jpg)
+
+
+
+
+
+
+
+
+# Introduction
+
+The aim of this analysis will seek to understand climate sensor data from Melbourne City Council. The datasets contain measurements obtained from November 2019 up until now, on things like humidity, temperature, and air quality from different locations around the city.
+
+--
+
+&lt;span style="color:brown"&gt;**Question of Interest: Is there evidence of a microclimate within Melbourne, that is, are there noticeable differences in temperature across the city?**&lt;/span&gt;
+
+--
+
+The question revolves around the presumption that there might be significant temperature differences even with locations that are in close proximity. This analysis tries to verify the correctness of this presumption.
+
+---
+.panelset[
+.panel[.panel-name[🔮 About the data]
+
+This data was retrieved from [City of Melbourne - Open Data](https://data.melbourne.vic.gov.au/) and consists of two main datasets as follows:
+
+- [Locations of the Sensors](https://data.melbourne.vic.gov.au/Environment/Microclimate-Sensor-Locations/irqv-hjr4
+)
+- [Sensor Readings](https://data.melbourne.vic.gov.au/Environment/Microclimate-Sensor-Readings/u4vh-84j8?src=featured_banner
+) 
+
+&lt;img src="2020-11-03.png" width="2512" /&gt;
+
+
+]
+.panel[.panel-name[🔍glimpse]
+.h350.scroll-sign[
+.grid[
+.item[
+
+```
+## Rows: 268,847
+## Columns: 7
+## $ id         &lt;int&gt; 4, 9, 13, 18, 23, 27, 32, 41, 46, 50, 55, 60, 65, 70, 75...
+## $ site_id    &lt;chr&gt; "arc1045", "arc1045", "arc1046", "arc1046", "arc1046", "...
+## $ sensor_id  &lt;chr&gt; "0a.EPA-1h.PKIND", "0b.EPA-1h.PKIND", "0a.EPA-1h", "0b.E...
+## $ value      &lt;dbl&gt; 1.00, 1.00, 4.40, 21.10, 14.83, 4.20, 19.00, 5.20, 22.70...
+## $ local_time &lt;chr&gt; "2019/11/15 09:00:00 AM", "2019/11/15 09:00:00 AM", "201...
+## $ type       &lt;chr&gt; "PM2.5-EPA-1h-PKIND", "PM10-EPA-1h-PKIND", "PM2.5-EPA-1h...
+## $ units      &lt;chr&gt; "0/1", "0/1", "ug/m^3", "ug/m^3", "C", "ug/m^3", "ug/m^3...
+```
+]
+.item[
+
+```
+## Rows: 5
+## Columns: 6
+## $ site_id     &lt;chr&gt; "arc1048", "arc1047", "arc1046", "arc1045", "arc1050"
+## $ description &lt;chr&gt; "141 Grattan Street, Carlton", "Corner of Pelham and Le...
+## $ last_data   &lt;chr&gt; "2020/10/30 02:00:01 PM", "2020/10/30 02:00:01 PM", "20...
+## $ latitude    &lt;dbl&gt; -37.80058, -37.80230, -37.80052, -37.80079, -37.80063
+## $ longitude   &lt;dbl&gt; 144.9646, 144.9609, 144.9641, 144.9665, 144.9651
+## $ location    &lt;chr&gt; "POINT (144.964635 -37.800575)", "POINT (144.960923 -37...
+```
+{{content}}
+]
+]
+]]
+.panel[.panel-name[⚠️ Missing values] 
+
+&lt;img src="mu-presentation_files/figure-html/unnamed-chunk-4-1.png" width="40%" /&gt;&lt;img src="mu-presentation_files/figure-html/unnamed-chunk-4-2.png" width="40%" /&gt;
+
+- We make use of the visdat package to visualize the joined locations and readings datasets. Since there is a presence of 'NA' in **vis_dat**, we check missing data using **vis_miss** to check for missing values. Since the missing values are &lt; 0.1%, it is safe to discard them for use with **na.omit()**. We use this refined data that is full and consistent for our analysis.
+]]
+
+---
+class:inverse
+
+# 📚 Data Wrangling
+
+
+```r
+data &lt;- left_join(readings, locations, by = "site_id") %&gt;% select(-id, -location, -type, -last_data) %&gt;%
+  filter(units == "C")
+
+weather &lt;- data %&gt;% group_by(site_id, sensor_id, local_time, description, latitude, longitude) %&gt;%
+  summarise(temp = sum(value)) %&gt;% na.omit() 
+
+avg_weather &lt;- weather %&gt;% group_by(description) %&gt;% summarise(avg = mean(temp))
+
+selected_date &lt;- weather %&gt;%
+  separate(col = local_time,into = c("date","time"), sep = " ") %&gt;%
+  separate(col = time, into = c("hour","mm"),sep = ":") %&gt;%
+  filter(date %in% c("2019/12/20", "2020/06/05"))
+
+day_date &lt;- weather %&gt;%
+  separate(col = local_time,into = c("date","time"), sep = " ") %&gt;%
+  separate(col = time, into = c("hour","mm"),sep = ":") %&gt;% 
+  filter(date == "2019/12/20" &amp; hour == "01" &amp; mm == "15")
+
+day_change &lt;- day_date %&gt;% 
+  select(-c(site_id,sensor_id)) %&gt;%  
+  group_by(description,latitude,longitude,hour,mm,date) %&gt;% 
+  summarise(avg_temp = mean(temp))
+```
+
+
+- Since the question of interest is around temperature measurements only, we have filtered the data with temperature readings and left joined it with the location dataset.
+
+--
+
+- As our approach tries to answer this question through the comparison of temperatures across the five sensor locations and for particular time of day, it was necessary to calculate the average temperature and separate the `local_time` column into `date`, `hour`, and `mm::ss`
+---
+
+class:inverse
+
+# Average Temp Comparison
+
+&lt;img src="mu-presentation_files/figure-html/avg-1.png" style="display: block; margin: auto;" /&gt;
+
+--
+
+- The average temperatures calculated ranges from 2019/11/15 01:00:00 PM till 2020/10/30 12:45:02 PM.
+
+- From the bar plot, the maximum average temperature is 16.221728 °C at Between 87 and 89 Grattan Street, Carlton.
+
+- And the minimum average temperature calculated is 14.7766671 °C at 3/121 Grattan Street, Carlton.
+
+- The temperature differences between the other sensor locations are ~0.5 °C. 
+
+---
+class:inverse
+
+# Location of the Sensors
+
+<div id="htmlwidget-63b97d11ec708fe75267" style="width:700px;height:200px;" class="leaflet html-widget"></div>
+<script type="application/json" data-for="htmlwidget-63b97d11ec708fe75267">{"x":{"options":{"crs":{"crsClass":"L.CRS.EPSG3857","code":null,"proj4def":null,"projectedBounds":null,"options":{}}},"calls":[{"method":"addTiles","args":["//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",null,null,{"minZoom":0,"maxZoom":18,"tileSize":256,"subdomains":"abc","errorTileUrl":"","tms":false,"noWrap":false,"zoomOffset":0,"zoomReverse":false,"opacity":1,"zIndex":1,"detectRetina":false,"attribution":"&copy; <a href=\"http://openstreetmap.org\">OpenStreetMap<\/a> contributors, <a href=\"http://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA<\/a>"}]},{"method":"addAwesomeMarkers","args":[[-37.800575,-37.8023,-37.800524,-37.800793,-37.800629],[144.964635,144.960923,144.964122,144.966492,144.965052],{"icon":"cloud","markerColor":"yellow","iconColor":"white","spin":false,"squareMarker":false,"iconRotate":0,"font":"monospace","prefix":"fa"},null,null,{"interactive":true,"draggable":false,"keyboard":true,"title":"","alt":"","zIndexOffset":0,"opacity":1,"riseOnHover":false,"riseOffset":250},["Location: 141 Grattan Street, Carlton <br> Average Temperature: 15.3 °C","Location: Corner of Pelham and Leicester Streets, Carlton <br> Average Temperature: 15.46 °C","Location: Corner of Swanston and Grattan Streets, Carlton <br> Average Temperature: 15.19 °C","Location: Between 87 and 89 Grattan Street, Carlton <br> Average Temperature: 16.22 °C","Location: 3/121 Grattan Street, Carlton <br> Average Temperature: 14.78 °C"],null,null,null,null,{"interactive":false,"permanent":false,"direction":"auto","opacity":1,"offset":[0,0],"textsize":"10px","textOnly":false,"className":"","sticky":true},null]}],"limits":{"lat":[-37.8023,-37.800524],"lng":[144.960923,144.966492]}},"evals":[],"jsHooks":[]}</script>
+
+- It is evident from the map that the sensors are located very close to each other/close in proximity. The maximum temperature Between 87 and 89 Grattan Street, Carlton is very close to other places but the temperature varies quite significantly keeping in mind how close they are on the same street.
+
+--
+
+- 3/121 Grattan Street, Carlton which is on the same street has the minimum temperature of the lot and has a difference of almost 1.5 °C from 87 and 89 Grattan Street, Carlton. This shows the presence of a microclimate on the same street. Two places that are closest to each other have the highest variance in average temperature throughout the year. 
+
+---
+# Temperature over time
+
+&lt;img src="mu-presentation_files/figure-html/monthly-1.png" style="display: block; margin: auto;" /&gt;
+
+--
+
+- We can observe that there is similarity in temperature across the sensors. Only the sensor at 87 and 89 Grattan Street, Carlton has a significant variance from 3/121 Grattan Street, Carlton and other sensors on Grattan St. and Pelam St have similar weather during all times.
+
+---
+
+# Temperature for a day
+
+<div id="htmlwidget-682817fa0083828e30be" style="width:700px;height:200px;" class="leaflet html-widget"></div>
+<script type="application/json" data-for="htmlwidget-682817fa0083828e30be">{"x":{"options":{"crs":{"crsClass":"L.CRS.EPSG3857","code":null,"proj4def":null,"projectedBounds":null,"options":{}}},"calls":[{"method":"addTiles","args":["//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",null,null,{"minZoom":0,"maxZoom":18,"tileSize":256,"subdomains":"abc","errorTileUrl":"","tms":false,"noWrap":false,"zoomOffset":0,"zoomReverse":false,"opacity":1,"zIndex":1,"detectRetina":false,"attribution":"&copy; <a href=\"http://openstreetmap.org\">OpenStreetMap<\/a> contributors, <a href=\"http://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA<\/a>"}]},{"method":"addAwesomeMarkers","args":[[-37.800575,-37.800629,-37.800793,-37.8023,-37.800524],[144.964635,144.965052,144.966492,144.960923,144.964122],{"icon":"cloud","markerColor":"yellow","iconColor":"white","spin":false,"squareMarker":false,"iconRotate":0,"font":"monospace","prefix":"fa"},null,null,{"interactive":true,"draggable":false,"keyboard":true,"title":"","alt":"","zIndexOffset":0,"opacity":1,"riseOnHover":false,"riseOffset":250},["Location: 141 Grattan Street, Carlton <br> Average Temperature: 27.2 °C <br> Date: 2019/12/20 <br> Hour: 01 <br> Minute: 15","Location: 3/121 Grattan Street, Carlton <br> Average Temperature: 26.9 °C <br> Date: 2019/12/20 <br> Hour: 01 <br> Minute: 15","Location: Between 87 and 89 Grattan Street, Carlton <br> Average Temperature: 29.02 °C <br> Date: 2019/12/20 <br> Hour: 01 <br> Minute: 15","Location: Corner of Pelham and Leicester Streets, Carlton <br> Average Temperature: 28.28 °C <br> Date: 2019/12/20 <br> Hour: 01 <br> Minute: 15","Location: Corner of Swanston and Grattan Streets, Carlton <br> Average Temperature: 27.98 °C <br> Date: 2019/12/20 <br> Hour: 01 <br> Minute: 15"],null,null,null,null,{"interactive":false,"permanent":false,"direction":"auto","opacity":1,"offset":[0,0],"textsize":"10px","textOnly":false,"className":"","sticky":true},null]}],"limits":{"lat":[-37.8023,-37.800524],"lng":[144.960923,144.966492]}},"evals":[],"jsHooks":[]}</script>
+
+
+- Taking just one day in particular for showing evidence of microclimate is more promising. Hence day considered - **2019/12/20** and time considered is: **01**:**15**.
+
+--
+
+- The highest average temperature recorded is 29.025°C at `Between 87 and 89 Grattan Street, Carlton` and the location which is nearest to it `3/121 Grattan Street, Carlton `, records the lowest average temperatures among the sensors with 26.895°C, even though it's on the same day and time.  
+
+
+---
+
+# Temperature on 20 Dec 2019
+
+--
+
+&lt;img src="mu-presentation_files/figure-html/daily-point-1.png" style="display: block; margin: auto;" /&gt;
+
+--
+
+- The above plot shows the average temperature over a single day, 20 Dec 2019 for each of the 5 sensor locations. If there is noticeable change in temperature over the same hour of the day, it goes to show that some places have a significantly different weather compared to other locations. This points at microclimate patterns in different locations of Melbourne.
+
+---
+
+class:inverse
+
+# &lt;span style="color:brown"&gt;Observations&lt;/span&gt;
+
+- The temperatures across different sensor locations in the data vary and we can observe a **range of averages even across the same Street**.
+
+--
+
+- The **maximum average temperature is observed at 87 and 89 Grattan Street, Carlton** while the **minimum average temperature is observed at 3/121 Grattan Street, Carlton**. These two sensors are located on the same street (Grattan St). They are only a few blocks away and we can still observe significant changes in temperature.
+
+--
+
+- Keeping in mind the different temperatures within such close proximity, it can be safely assumed that **temperatures vary significantly within Melbourne**, if we consider more sensors.
+
+--
+
+- Melbourne as a whole cannot be classified to have a certain type of climate all throughout consistently. **There is a presence of microclimate within Melbourne**.
+
+--
+
+- In simpler words, there's noticeable change in temperatures across the City of Melbourne. The average temperature at one location within close proximity to another can have noticeable differences in climate.
+---
+class: center, middle, inverse
+![](https://media.giphy.com/media/QRhtqYeEywJI4/giphy.gif)&lt;!-- --&gt;
+
+# Thanks for your time!
+
+Slides created via the R package [**xaringan**](https://github.com/yihui/xaringan).
+
+R Packages used:
+[tidyverse](https://doi.org/10.21105/joss.01686) |
+[kableExtra](https://CRAN.R-project.org/package=kableExtra) | [leaflet](https://CRAN.R-project.org/package=leaflet) | [lubridate](http://www.jstatsoft.org/v40/i03/) | [viridis](https://CRAN.R-project.org/package=viridis) 
+
+GIF credits - [giphy website](https://giphy.com/) |
+Title Header credits: [Monash](https://www.monashcollege.edu.au/study-areas/business) |
+Image credits: [Melbourne weather](https://www.hostelworld.com/blog/sydney-vs-melbourne/)
+
+---
+class: middle, center
+
+![](https://images-cdn.9gag.com/photo/5498693_700b.jpg)&lt;!-- --&gt;
+
+
+# Q&amp;A Time 
+
+
+.footnote[Image credits: https://9gag.com/gag/5498693]
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

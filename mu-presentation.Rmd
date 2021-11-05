@@ -1,0 +1,330 @@
+---
+title: "ETC5523 CWD Presentation by team 'mu'"
+subtitle: "Microclimate Patterns across Melbourne"
+author:
+  - Rahul Bharadwaj Mysore Venkatesh
+  - Varsha Ujjinni Vijay Kumar 
+institute: Monash University
+date: "2020/11/04"
+output:
+  xaringan::moon_reader:
+    css: ["styling.css","rutgers","rladies-fonts"]
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+background-image: url(https://cms.hostelworld.com/hwblog/wp-content/uploads/sites/2/2017/11/Sydney-vs-Melbourne-@miss_kamw-mel-weather.jpg)
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+```
+
+```{r libraries, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,message = FALSE, warning = FALSE)
+library(tidyverse)
+library(kableExtra)
+library(leaflet)
+library(ggthemes)
+library(lubridate)
+library(viridis)
+library(visdat)
+xaringanExtra::use_panelset()
+```
+
+
+```{r ReadData , include=FALSE}
+locations <- read.csv(here::here("/data/Microclimate_Sensor_Locations.csv"))
+readings <- read.csv(here::here("/data/Microclimate_Sensor_Readings.csv")) %>%
+  filter(site_id == c("arc1048", "arc1047", "arc1046", "arc1045", "arc1050"))
+data <- left_join(readings, locations, by = "site_id") %>% select(-id, -location, -type, -last_data) %>%
+  filter(units == "C")
+```
+
+# Introduction
+
+The aim of this analysis will seek to understand climate sensor data from Melbourne City Council. The datasets contain measurements obtained from November 2019 up until now, on things like humidity, temperature, and air quality from different locations around the city.
+
+--
+
+<span style="color:brown">**Question of Interest: Is there evidence of a microclimate within Melbourne, that is, are there noticeable differences in temperature across the city?**</span>
+
+--
+
+The question revolves around the presumption that there might be significant temperature differences even with locations that are in close proximity. This analysis tries to verify the correctness of this presumption.
+
+---
+.panelset[
+.panel[.panel-name[`r emo::ji("crystal_ball")` About the data]
+
+This data was retrieved from [City of Melbourne - Open Data](https://data.melbourne.vic.gov.au/) and consists of two main datasets as follows:
+
+- [Locations of the Sensors](https://data.melbourne.vic.gov.au/Environment/Microclimate-Sensor-Locations/irqv-hjr4
+)
+- [Sensor Readings](https://data.melbourne.vic.gov.au/Environment/Microclimate-Sensor-Readings/u4vh-84j8?src=featured_banner
+) 
+
+```{r echo=FALSE}
+knitr::include_graphics("2020-11-03.png")
+```
+
+
+]
+.panel[.panel-name[`r emo::ji("mag")`glimpse]
+.h350.scroll-sign[
+.grid[
+.item[
+```{r echo=FALSE,fig.show="hold", out.width="50%"}
+glimpse(readings)
+```
+]
+.item[
+```{r echo=FALSE,fig.show="hold", out.width="50%"}
+glimpse(locations)
+```
+{{content}}
+]
+]
+]]
+.panel[.panel-name[`r emo::ji("warning")` Missing values] 
+
+```{r echo=FALSE,fig.show="hold", out.width="40%"}
+vis_dat(data)
+vis_miss(data) 
+```
+
+- We make use of the visdat package to visualize the joined locations and readings datasets. Since there is a presence of 'NA' in **vis_dat**, we check missing data using **vis_miss** to check for missing values. Since the missing values are < 0.1%, it is safe to discard them for use with **na.omit()**. We use this refined data that is full and consistent for our analysis.
+]]
+
+---
+class:inverse
+
+# `r emo::ji("books")` Data Wrangling
+
+```{r Wrangle}
+data <- left_join(readings, locations, by = "site_id") %>% select(-id, -location, -type, -last_data) %>%
+  filter(units == "C")
+
+weather <- data %>% group_by(site_id, sensor_id, local_time, description, latitude, longitude) %>%
+  summarise(temp = sum(value)) %>% na.omit() 
+
+avg_weather <- weather %>% group_by(description) %>% summarise(avg = mean(temp))
+
+selected_date <- weather %>%
+  separate(col = local_time,into = c("date","time"), sep = " ") %>%
+  separate(col = time, into = c("hour","mm"),sep = ":") %>%
+  filter(date %in% c("2019/12/20", "2020/06/05"))
+
+day_date <- weather %>%
+  separate(col = local_time,into = c("date","time"), sep = " ") %>%
+  separate(col = time, into = c("hour","mm"),sep = ":") %>% 
+  filter(date == "2019/12/20" & hour == "01" & mm == "15")
+
+day_change <- day_date %>% 
+  select(-c(site_id,sensor_id)) %>%  
+  group_by(description,latitude,longitude,hour,mm,date) %>% 
+  summarise(avg_temp = mean(temp))
+```
+
+
+- Since the question of interest is around temperature measurements only, we have filtered the data with temperature readings and left joined it with the location dataset.
+
+--
+
+- As our approach tries to answer this question through the comparison of temperatures across the five sensor locations and for particular time of day, it was necessary to calculate the average temperature and separate the `local_time` column into `date`, `hour`, and `mm::ss`
+---
+
+class:inverse
+
+# Average Temp Comparison
+
+```{r avg,echo=FALSE,fig.height=3,fig.width=7,fig.align='center'}
+ggplot(avg_weather,aes(
+  x = reorder(description,avg),
+  y = avg,
+  fill = description
+)) +
+  geom_col()+
+  geom_text(label = paste(round(avg_weather$avg,2),"°C"), hjust = 1.5)+ 
+  coord_flip()+
+  theme(axis.text.y = element_blank())+
+  labs(x = "Average Temperature(°C)", y = "Sensor Location", title= "Average temperatures across Melbourne(°C)",fill = "Sensor Location")
+
+```
+
+--
+
+- The average temperatures calculated ranges from `r min(weather$local_time)` till `r max(weather$local_time)`.
+
+- From the bar plot, the maximum average temperature is `r max(avg_weather$avg)` °C at Between 87 and 89 Grattan Street, Carlton.
+
+- And the minimum average temperature calculated is `r min(avg_weather$avg)` °C at 3/121 Grattan Street, Carlton.
+
+- The temperature differences between the other sensor locations are ~0.5 °C. 
+
+---
+class:inverse
+
+# Location of the Sensors
+
+```{r leafmap, echo=FALSE, out.height=200, out.width=700,fig.align='center'}
+icons <- awesomeIcons(
+  icon = 'cloud',
+  iconColor = 'white',
+  library = 'fa',
+  markerColor = 'yellow'
+)
+avgloc <- left_join(locations, avg_weather, by = "description")
+leaflet(locations) %>% 
+  addTiles() %>%
+  addAwesomeMarkers(icon = icons, 
+                    ~longitude,
+                    ~latitude, 
+                    popup = paste("Location:", avgloc$description, "<br>",
+                                  "Average Temperature:", round(avgloc$avg,2),"°C"))
+```
+
+- It is evident from the map that the sensors are located very close to each other/close in proximity. The maximum temperature Between 87 and 89 Grattan Street, Carlton is very close to other places but the temperature varies quite significantly keeping in mind how close they are on the same street.
+
+--
+
+- 3/121 Grattan Street, Carlton which is on the same street has the minimum temperature of the lot and has a difference of almost 1.5 °C from 87 and 89 Grattan Street, Carlton. This shows the presence of a microclimate on the same street. Two places that are closest to each other have the highest variance in average temperature throughout the year. 
+
+---
+# Temperature over time
+
+```{r monthly,echo=FALSE, fig.height=5, fig.width=10, fig.align='center'}
+weather$local_time <- as_datetime(weather$local_time) 
+ggplot(weather, aes(
+  x= local_time,
+  y = temp,
+  color = temp
+)) +
+  geom_point() +
+  labs(x = "Date", y = "Temperature(°C)",color = "Temperature(°C)")+
+  theme_hc(style = "darkunica")+
+  scale_color_viridis_c(option = "B")+
+  facet_grid(.~ description) + 
+  theme(axis.text.x = element_text(angle = 90,color = "white"), 
+        panel.border = element_rect(colour = "black", fill=NA, size=2),
+        axis.text.y = element_text(color = "white"),
+        axis.title.x = element_text(color = "white"),
+        axis.title.y = element_text(color = "white"), panel.background = element_rect(
+          fill = "grey", color = "black", size = .5, linetype = "solid"))
+```
+
+--
+
+- We can observe that there is similarity in temperature across the sensors. Only the sensor at 87 and 89 Grattan Street, Carlton has a significant variance from 3/121 Grattan Street, Carlton and other sensors on Grattan St. and Pelam St have similar weather during all times.
+
+---
+
+# Temperature for a day
+
+```{r leaflet, echo=FALSE, out.height=200, out.width=700,fig.align='center'}
+leaflet(day_change) %>% addTiles() %>%
+  addAwesomeMarkers(icon = icons, 
+                    ~longitude, 
+                    ~latitude, 
+                    popup = paste("Location:", day_change$description, "<br>", 
+                                  "Average Temperature:", round(day_change$avg_temp,2),"°C","<br>",
+                                  "Date:", day_change$date,"<br>",
+                                  "Hour:", day_change$hour,"<br>",
+                                  "Minute:", day_change$mm))
+
+```
+
+
+- Taking just one day in particular for showing evidence of microclimate is more promising. Hence day considered - **`r unique(day_change$date)`** and time considered is: **`r unique(day_change$hour)`**:**`r unique(day_change$mm)`**.
+
+--
+
+- The highest average temperature recorded is `r max(day_change$avg_temp)`°C at `Between 87 and 89 Grattan Street, Carlton` and the location which is nearest to it `3/121 Grattan Street, Carlton `, records the lowest average temperatures among the sensors with `r min(day_change$avg_temp)`°C, even though it's on the same day and time.  
+
+
+---
+
+# Temperature on 20 Dec 2019
+
+--
+
+```{r daily-point,fig.height=5, fig.width=8, fig.align='center',echo=FALSE}
+grouped_date <- selected_date %>% filter(date == "2019/12/20") %>%
+  select(description,hour,date,temp) %>%  
+  group_by(hour,description,date) %>% 
+  summarise(avg = mean(temp))
+
+ggplot(grouped_date, aes(
+  x= hour,
+  y = avg,
+  color = avg
+)) +
+  geom_point(size = 4)+
+  labs(x = "Hour of the day", y = "Temperature(°C)",color = "Temperature(°C)")+
+  theme_economist()+
+  scale_color_viridis_c(option = "B")+
+  theme(legend.position = "right",
+        axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0)),
+        axis.title.x = element_text(margin = margin(t = 0, r = 0, b = 10, l = 0)),
+        axis.text.y = element_blank())+
+  facet_wrap(~ description, nrow = 5)
+```
+
+--
+
+- The above plot shows the average temperature over a single day, 20 Dec 2019 for each of the 5 sensor locations. If there is noticeable change in temperature over the same hour of the day, it goes to show that some places have a significantly different weather compared to other locations. This points at microclimate patterns in different locations of Melbourne.
+
+---
+
+class:inverse
+
+# <span style="color:brown">Observations</span>
+
+- The temperatures across different sensor locations in the data vary and we can observe a **range of averages even across the same Street**.
+
+--
+
+- The **maximum average temperature is observed at 87 and 89 Grattan Street, Carlton** while the **minimum average temperature is observed at 3/121 Grattan Street, Carlton**. These two sensors are located on the same street (Grattan St). They are only a few blocks away and we can still observe significant changes in temperature.
+
+--
+
+- Keeping in mind the different temperatures within such close proximity, it can be safely assumed that **temperatures vary significantly within Melbourne**, if we consider more sensors.
+
+--
+
+- Melbourne as a whole cannot be classified to have a certain type of climate all throughout consistently. **There is a presence of microclimate within Melbourne**.
+
+--
+
+- In simpler words, there's noticeable change in temperatures across the City of Melbourne. The average temperature at one location within close proximity to another can have noticeable differences in climate.
+---
+class: center, middle, inverse
+```{r gif,echo=FALSE,height = 2}
+knitr::include_graphics("https://media.giphy.com/media/QRhtqYeEywJI4/giphy.gif")
+```
+
+# Thanks for your time!
+
+Slides created via the R package [**xaringan**](https://github.com/yihui/xaringan).
+
+R Packages used:
+[tidyverse](https://doi.org/10.21105/joss.01686) |
+[kableExtra](https://CRAN.R-project.org/package=kableExtra) | [leaflet](https://CRAN.R-project.org/package=leaflet) | [lubridate](http://www.jstatsoft.org/v40/i03/) | [viridis](https://CRAN.R-project.org/package=viridis) 
+
+GIF credits - [giphy website](https://giphy.com/) |
+Title Header credits: [Monash](https://www.monashcollege.edu.au/study-areas/business) |
+Image credits: [Melbourne weather](https://www.hostelworld.com/blog/sydney-vs-melbourne/)
+
+---
+class: middle, center
+
+```{r echo=FALSE}
+knitr::include_graphics("https://images-cdn.9gag.com/photo/5498693_700b.jpg")
+```
+
+
+# Q&A Time 
+
+
+.footnote[Image credits: https://9gag.com/gag/5498693]

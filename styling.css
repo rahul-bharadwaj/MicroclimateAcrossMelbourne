@@ -1,0 +1,25 @@
+.title-slide {
+	background-color: #fff;
+  background-image: url(https://www.monashcollege.edu.au/__data/assets/image/0007/755953/Monash-College-Banner-Business.jpg);
+	background-position: center top 20px;
+	background-size: 100%;
+	border-bottom: 0px solid  #522D80;
+	box-shadow:  0 55px 0 #fff;
+}
+
+.remark-slide-content h2 {
+    font-size: 40px;
+}
+
+element.style{
+    width: 750px;
+}
+
+.hljs-github .hljs{
+    height: 200px;
+    overflow-y: auto
+}
+
+.remark-slide-content{
+    font-size: 18px;
+}

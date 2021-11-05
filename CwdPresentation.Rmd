@@ -1,0 +1,80 @@
+---
+title: "CWD Presentation"
+author: "Rahul Bharadwaj Mysore Venkatesh"
+date: "30/10/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,message = FALSE, warning = FALSE)
+library(tidyverse)
+library(kableExtra)
+library(leaflet)
+library(lubridate)
+library(viridis)
+```
+
+
+```{r ReadData}
+locations <- read.csv(here::here("/data/Microclimate_Sensor_Locations.csv"))
+readings <- read.csv(here::here("/data/Microclimate_Sensor_Readings.csv")) %>%
+  filter(site_id == c("arc1048", "arc1047", "arc1046", "arc1045", "arc1050"))
+```
+
+
+```{r Wrangle}
+data <- left_join(readings, locations, by = "site_id") %>% select(-id, -location, -type, -last_data) %>%
+  filter(units == "C")
+
+weather <- data %>% group_by(site_id, sensor_id, local_time, description, latitude, longitude) %>%
+  summarise(summary = sum(value)) %>% na.omit() 
+
+selected_date <- weather %>% separate(col = local_time,into = c("date","time"), sep = " ") %>% separate(col = time, into = c("hour","mm:ss"),sep = ":") %>% filter(date %in% c("2019/12/20", "2020/06/05"))
+```
+
+
+
+```{r}
+ggplot(avg_weather,aes(
+  x = reorder(description,avg),
+  y = avg,
+  fill = description
+)) +
+  geom_col()+
+  geom_text(label = round(avg_weather$avg,2), hjust = 1.5)+ 
+  coord_flip()+
+  theme(axis.text.y = element_blank())+
+  labs(x = "Average Temp(C)", y = "Sensor Location", title= "Average temperatures across Melbourne",fill = "Sensor Location")
+
+```
+
+```{r}
+leaflet(locations) %>% addTiles() %>% addMarkers(~longitude, ~latitude, popup = paste("Location:", locations$description, "<br>",
+                          "Average Temperature:", round(avg_weather$avg,2)),radius = avg_weather$avg)
+```
+
+
+```{r fig.width=15}
+weather$local_time <- as_datetime(weather$local_time) 
+ggplot(weather, aes(
+  x= local_time,
+  y = summary,
+  color = summary
+)) +
+  geom_point() +
+  scale_color_viridis_c(option = "B")+
+  facet_grid(~ description) +
+  theme_dark()
+```
+```{r}
+ggplot(selected_date, aes(
+  x= hour,
+  y = summary,
+  color = summary
+)) +
+  geom_point() +
+  scale_color_viridis_c(option = "B")+
+  facet_wrap(~ description) 
+#plotly::ggplotly(p1)
+```
+
